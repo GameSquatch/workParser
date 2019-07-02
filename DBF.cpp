@@ -136,7 +136,11 @@ void DBF::parseBureauFile(const std::string& burFilePath) {
 		while (pos < burFile.length()) {
 			std::string key = it->first;
 			pos = burFile.find(this->endFiller + key);
-			if ()
+			if (pos != std::string::npos) {
+				for (int i = 0; i < it->second.size(); ++i) {
+					std::string data = burFile.substr(pos, it->second[i].len);
+				}
+			}
 		}
 
 	}
