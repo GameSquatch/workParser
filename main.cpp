@@ -24,6 +24,8 @@ int main(int argc, char* argv[]) {
 
 	DBF dbf(dbfPath, bureau);
 
+	dbf.parseBureauFile(burFile);
+
 	return 0;
 }
 

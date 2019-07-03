@@ -10,16 +10,22 @@ DBF::DBF(const std::string& OUTDBFPath, const std::string& bur)
 		this->OUTDBFPath += "CBIOUT.DBF";
 		this->endFiller = "  ";
 	}
-	else if (this->burea == "Experian") {
+	else if (this->bureau == "Experian") {
 		this->OUTDBFPath += "TRWOUT.DBF";
 		this->endFiller = "@";
 	}
 
-	loadDBF();
-	readDBF();
+	this->loadedDBF = loadDBF();
+	if (this-loadedDBF) {
+		this->didReadDBF = readDBF();
+	}
+	else {
+		std::cout << "Failed loading the DBF." << std::endl;
+	}
+	
 }
 
-void DBF::loadDBF() {
+bool DBF::loadDBF() {
 	std::cout << "DBF Path is: " << this->OUTDBFPath << std::endl;
 	std::ifstream dbfIn;
 	std::filebuf* pdbfIn = dbfIn.rdbuf();
@@ -45,18 +51,20 @@ void DBF::loadDBF() {
 	else {
 		std::cout << "Could not open the output DBF. Check the path for errors:\n";
 		std::cout << this->OUTDBFPath << std::endl;
+		return false;
 	}
+	return true;
 }// end loadDBF func
 
-void DBF::readDBF() {
+bool DBF::readDBF() {
 	size_t pos = this->dbfFileStr.find_first_of(' ');
 	if (pos != std::string::npos) {
 		++pos;// Include the space
 		this->header = this->dbfFileStr.substr(0, pos);
-		std::cout << "[" << this->header << "]" << std::endl;
 	}
 	else {
 		std::cout << "No space after the header for some reason. Can't parse." << std::endl;
+		return false;
 	}
 
 	int i = 0;
@@ -83,6 +91,7 @@ void DBF::readDBF() {
 			switch(i) {
 			case 0:
 				seg.name = sectionContent;
+				segmentKeys.push_back(seg.name);
 				break;
 			case 1:
 				seg.desc = sectionContent;
@@ -96,7 +105,7 @@ void DBF::readDBF() {
 			case 4:
 				seg.varName = sectionContent;
 				pos = this->dbfFileStr.find_first_not_of(' ', pos);
-				this->segmentSection[seg.name].push_back(seg);
+				this->segments[seg.name].push_back(seg);
 				//printSeg(seg);
 				break;
 			}
@@ -104,6 +113,12 @@ void DBF::readDBF() {
 		++i;
 		i %= 5;
 	}//end of while loop
+
+	if (segments.size() == 0) {
+		std::cout << "There were no segments to read, or something went wrong." << std::endl;
+		return false;
+	}
+	return true;
 }//end readDBF func
 
 void DBF::trimContent(std::string& content) {
@@ -121,27 +136,48 @@ void DBF::parseBureauFile(const std::string& burFilePath) {
 	std::ifstream burIn;
 	std::filebuf* pBurIn = burIn.rdbuf();
 
-	pBurIn->open(burFilePath.c_str());
+	pBurIn->open(burFilePath.c_str(), std::ios::in);
 
 	if (pBurIn->is_open()) {
 		long sz = pBurIn->pubseekoff(0, burIn.end);
 		pBurIn->pubseekpos(0);
+
 		char* burBuff = new char[sz];
 		std::string burFile = burBuff;
 		delete [] burBuff;
 
-		size_t pos = 0;
-		std::map<std::string, std::vector<Segment> >::iterator it = segmentSection.begin();
+		pBurIn->close();
 
-		while (pos < burFile.length()) {
-			std::string key = it->first;
-			pos = burFile.find(this->endFiller + key);
-			if (pos != std::string::npos) {
-				for (int i = 0; i < it->second.size(); ++i) {
-					std::string data = burFile.substr(pos, it->second[i].len);
-				}
-			}
-		}
+		size_t pos = 0;
+
+		std::cout << segments[segmentKeys[0]][0].pos << std::endl;
+		
+
+		//int lenPos = atoi(segments[segmentKeys[0]][1].pos.c_str());
+		//int lenLen = atoi(segments[segmentKeys[0]][1].len.c_str());
+
+
+
+		// while (pos < burFile.length()) {
+		// 	std::string key = it->first;
+		// 	pos = burFile.find(this->endFiller + key);
+		// 	if (pos != std::string::npos) {
+		// 		for (int i = 0; i < it->second.size(); ++i) {
+		// 			// need to know the type of segment %, &, or #
+		// 			std::string curVarName = it->second[i].varName.substr(0, 8);
+		// 			if (curVarName[0] == '%') {
+		// 				if (curVarName[1] == '|') {
+
+		// 				}
+		// 				else {
+
+		// 				}
+		// 			}
+		// 			std::string data = burFile.substr(pos, it->second[i].len);
+
+		// 		}
+		// 	}
+		// }
 
 	}
 	else {
