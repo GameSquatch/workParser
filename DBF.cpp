@@ -27,26 +27,15 @@ DBF::DBF(const std::string& OUTDBFPath, const std::string& bur)
 
 bool DBF::loadDBF() {
 	std::cout << "DBF Path is: " << this->OUTDBFPath << std::endl;
-	std::ifstream dbfIn;
-	std::filebuf* pdbfIn = dbfIn.rdbuf();
-	pdbfIn->open(this->OUTDBFPath.c_str(), std::ios::in);
+	std::ifstream dbfIn(this->OUTDBFPath.c_str());
 
+	std::cout << "Loading DBF..." << std::endl;
 
-	if (pdbfIn->is_open()) {
-		// Find the end of the file, read the entire thing, and put it in a string
-		long dbfSize = pdbfIn->pubseekoff(0, dbfIn.end);
-		pdbfIn->pubseekpos(0);
-		try {
-			char* buff = new char[dbfSize + 1];
-			pdbfIn->sgetn(buff, dbfSize);
-			this->dbfFileStr = buff;
-			delete [] buff;//don't forget to delete! :D
-		}
-		catch (std::exception& e) {
-			std::cerr << "Error: " << e.what() << std::endl;
-		}
+	if (dbfIn.is_open()) {
+		std::cout << "Successfully opened the dbf. Ready to read entire file." << std::endl;
 
-		pdbfIn->close();
+			std::getline(dbfIn, this->dbfFileStr);
+			dbfIn.close();
 	}
 	else {
 		std::cout << "Could not open the output DBF. Check the path for errors:\n";
@@ -69,6 +58,7 @@ bool DBF::readDBF() {
 
 	int i = 0;
 	std::string sectionContent = "";
+	std::string oldSegName = "";
 	int sectionLen = 0;
 	Segment seg;
 	while (true) {
@@ -84,6 +74,7 @@ bool DBF::readDBF() {
 
 			unsigned int contentInt = 0;
 			pos += sectionLen;
+			
 			if (i == 2 || i == 3) {
 				contentInt = (unsigned int)atoi(sectionContent.c_str());
 			}
@@ -91,7 +82,10 @@ bool DBF::readDBF() {
 			switch(i) {
 			case 0:
 				seg.name = sectionContent;
-				segmentKeys.push_back(seg.name);
+				if (seg.name != oldSegName) {
+					oldSegName = seg.name;
+					segmentKeys.push_back(seg.name);
+				}
 				break;
 			case 1:
 				seg.desc = sectionContent;
@@ -112,6 +106,7 @@ bool DBF::readDBF() {
 		}
 		++i;
 		i %= 5;
+		
 	}//end of while loop
 
 	if (segments.size() == 0) {
@@ -132,57 +127,102 @@ void DBF::trimContent(std::string& content) {
 }
 
 void DBF::parseBureauFile(const std::string& burFilePath) {
+	if (!this->didReadDBF) {
+		std::cout << "Not continuing with parsing since the DBF was not read successfully." << std::endl;
+		return;
+	}
 	// open bureauFile
-	std::ifstream burIn;
-	std::filebuf* pBurIn = burIn.rdbuf();
+	std::ifstream burIn(burFilePath.c_str());
+		
+	std::cout << "Parsing bureau file. Starting to open file..." << std::endl;
 
 	this->burData.reserve(512);
 
-	pBurIn->open(burFilePath.c_str(), std::ios::in);
-
-	if (pBurIn->is_open()) {
-		long sz = pBurIn->pubseekoff(0, burIn.end);
-		pBurIn->pubseekpos(0);
-
-		char* burBuff = new char[sz];
-		std::string burFile = burBuff;
-		delete [] burBuff;
-
-		pBurIn->close();
+	if (burIn.is_open()) {
+		std::cout << "Bureau file opened. Ready to parse." << std::endl;
+			
+		std::string burFile = "";
+		std::getline(burIn, burFile);
+			
+		burIn.close();
+		if (burFile == "") {
+			std::cout << "The bureau file was read, but the result is an empty string. Exiting..." << std::endl;
+			return;
+		}
 
 		size_t pos = 0;
-
-		for (int i = 0; i < segments.size(); ++i) {
+		std::cout << "Starting to loop through data now...\n" << std::endl;
+		for (int i = 0; i < segmentKeys.size(); ++i) {
 			int segLen = 0;
 			int segPos = 0;
+			int subSegPos = 0;
+			int subSegLen = 0;
 			int nextLen = -1;
-			int len;
+			int len = 0;//doesn't really need the default
+			
+			std:: cout << "Starting to loop through the sections in segment \"" << segmentKeys[i] << "\"..." << std::endl;
 
-			for (int j = 0; j < segments[segmentKeys[0]].size(); ++j) {
+			for (int j = 0; j < segments[segmentKeys[i]].size(); ++j) {
 				if (nextLen != -1) {
 					len = nextLen;
 					nextLen = -1;
+					std::cout << "nextLen was not -1, so setting the len to " << len << "." << std::endl;
 				}
 				else {
-					len = atoi(segments[segmentKeys[i]][j].len.c_str());
+					len = this->segments[segmentKeys[i]][j].len;
+					std::cout << "nextLen was -1, so setting the len to " << len << "." << std::endl;
 				}
 				
-				std::string varName = segment[segmentKeys[i]][j].varName;
+				std::string varName = segments[segmentKeys[i]][j].varName;
 				std::string burReadLine = burFile.substr(pos, len);
+				std::cout << "The varName from the dbf is currently " << varName << ", and the data just read was:\n[" << burReadLine << "]" << std::endl;
+				if (j == 0 && burReadLine != segmentKeys[i]) {
+					std::cout << "Segment \"" << segmentKeys[i] << "\" is not found in this bureau file. Skipping to next segment..." << std::endl;
+					break;
+				}
+				
+				if (varName.substr(0, 2) == "%|" && varName.substr(2,7) == "Seg_Len") {
+					segLen = atoi(burReadLine.c_str());
+					std::cout << "Found the current segment's length data. Setting that to " << segLen << std::endl;
+				}
+				else if (varName.substr(0, 2) == "%|") {
+					subSegLen = atoi(burReadLine.c_str()) - subSegPos;
+				}
+				else if (varName[0] == '%') {
+					nextLen = atoi(burReadLine.c_str());
+					std::cout << "Found length data for variable length attribute, " << varName << ". Setting the next data fetch length to " << nextLen << std::endl;
+				}
+				else if (varName.find("@|") != std::string::npos) {
+					do {
+						std::cout << "Found a conditional subsegment, " << varName << "." << std::endl;
+						size_t condSubPos = varName.find("@|");
+						std::string subSegName = varName.substr(0, condSubPos);
+						if (subSegName != burReadLine) {
+							std::cout << "The line read from bureau file does not have this subsegment. Finding the next one..." << std::endl;
+							do {
+								varName = this->segments[segmentKeys[i]][++j].varName;
+							} while (j < segments[segmentKeys[i]].size() - 1 && varName.find("@|") == std::string::npos);
+						}
+						else {
+							std::cout << "This bureau file contains the subsegment " << subSegName << "." << std::endl;
+							subSegPos = subSegName.length();
+							break;
+						}
+					} while (varName != "&EOS");
+					if (varName == "&EOS")
+						std::cout << "Reached the end of the \"" << segmentKeys[i] << "\" segment. Continuing..." << std::endl;
+				}
+				
 				// TODO: only push back the segments the user wants to edit
-				this->burData.push_back(burReadLine);
+				if (burReadLine != "")
+					this->burData.push_back(burReadLine);
 				segPos += len;
 				pos += len;
-
-				if (varName.substr(0, 2) == "%|" && varName.substr(3,7) == "Seg_Len") {
-					segLen = atoi(burReadLine.c_str());
-				}
-				else if (varName[1] == '%') {
-					nextLen = atoi(burReadLine.c_str());
-				}
-			}
-
-		}
+				std::cout << "Saving the data read:[" << burReadLine << "]\n Incrementing the segPos and global \"pos\" by len = " << len << std::endl;
+				std::cout << "i = " << i << " | Seg Len = " << segLen << " | segPos = " << segPos << " | nextLen = " << nextLen << " | len = " << len << std::endl;
+			}// end of inner for-loop
+			std::cout << "End of segment \"" << segmentKeys[i] << "\". Moving to next one..." << std::endl;
+		}//end of outer for-loop
 
 		// while (pos < burFile.length()) {
 		// 	std::string key = it->first;
