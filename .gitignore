@@ -30,6 +30,7 @@
 *.exe
 *.out
 *.app
+burEdit
 
 # VS Code
 .vscode

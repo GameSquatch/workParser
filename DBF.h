@@ -15,6 +15,7 @@ private:
 	std::map<std::string, std::vector<Segment> > segments;
 	std::vector<std::string> segmentKeys;
 	std::map<std::string, std::vector<std::string> > segmentData;
+	std::vector<std::string> burData;
 	std::string OUTDBFPath;
 	std::string dbfFileStr;
 	std::string header;

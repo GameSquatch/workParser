@@ -136,6 +136,8 @@ void DBF::parseBureauFile(const std::string& burFilePath) {
 	std::ifstream burIn;
 	std::filebuf* pBurIn = burIn.rdbuf();
 
+	this->burData.reserve(512);
+
 	pBurIn->open(burFilePath.c_str(), std::ios::in);
 
 	if (pBurIn->is_open()) {
@@ -150,13 +152,37 @@ void DBF::parseBureauFile(const std::string& burFilePath) {
 
 		size_t pos = 0;
 
-		std::cout << segments[segmentKeys[0]][0].pos << std::endl;
-		
+		for (int i = 0; i < segments.size(); ++i) {
+			int segLen = 0;
+			int segPos = 0;
+			int nextLen = -1;
+			int len;
 
-		//int lenPos = atoi(segments[segmentKeys[0]][1].pos.c_str());
-		//int lenLen = atoi(segments[segmentKeys[0]][1].len.c_str());
+			for (int j = 0; j < segments[segmentKeys[0]].size(); ++j) {
+				if (nextLen != -1) {
+					len = nextLen;
+					nextLen = -1;
+				}
+				else {
+					len = atoi(segments[segmentKeys[i]][j].len.c_str());
+				}
+				
+				std::string varName = segment[segmentKeys[i]][j].varName;
+				std::string burReadLine = burFile.substr(pos, len);
+				// TODO: only push back the segments the user wants to edit
+				this->burData.push_back(burReadLine);
+				segPos += len;
+				pos += len;
 
+				if (varName.substr(0, 2) == "%|" && varName.substr(3,7) == "Seg_Len") {
+					segLen = atoi(burReadLine.c_str());
+				}
+				else if (varName[1] == '%') {
+					nextLen = atoi(burReadLine.c_str());
+				}
+			}
 
+		}
 
 		// while (pos < burFile.length()) {
 		// 	std::string key = it->first;
