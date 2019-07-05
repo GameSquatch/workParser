@@ -13,18 +13,20 @@ int main(int argc, char* argv[]) {
 	// }
 	
 	// pass the argument into a string (might want for later)
-	string burFile = "../B123MYRX.3JJ";//argv[1];
+	string burFile = "./B123MYRX.3Lo";//argv[1];
 	string bureau = whichBur(burFile);
 	cout << "Bureau is " << bureau << endl;
 
 	if (bureau == "Error")
 		return 2;
 
-	string dbfPath = "../";
+	string dbfPath = "./";
 
 	DBF dbf(dbfPath, bureau);
-
+	
 	dbf.parseBureauFile(burFile);
+	
+	dbf.editBureauFile();
 
 	return 0;
 }
@@ -38,10 +40,10 @@ string whichBur(const string& burFilePath) {
 		std::getline(burIn, line);
 		burIn.close();
 		
-		if (line.find("PT") != string::npos) {
+		if (line.find("FULL") == 0) {
 			return "Equifax";
 		}
-		else if (line.find("@357") != string::npos) {
+		else if (line.find("110") == 0) {
 			return "Experian";
 		}
 		else {
