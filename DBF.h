@@ -11,15 +11,21 @@
 
 class DBF {
 private:
-	std::string bureau;//Equifax, Experian, maybe TU at some point
 	std::map<std::string, std::vector<Segment> > segments;
+	//std::map<std::string, std::vector<std::string> > segmentData;
+	std::map<std::string, std::vector<std::string> > burSegData;
+		
 	std::vector<std::string> segmentKeys;
-	std::map<std::string, std::vector<std::string> > segmentData;
+	std::vector<std::string> burFileSegKeys;
 	std::vector<std::string> burData;
+		
+	std::string bureau;//Equifax, Experian, maybe TU at some point
 	std::string OUTDBFPath;
 	std::string dbfFileStr;
 	std::string header;
 	std::string endFiller;
+	std::string editSeg;
+		
 	bool loadedDBF;
 	bool didReadDBF;
 
@@ -29,11 +35,14 @@ public:
 
 	static unsigned short int OUTDBFSectionLens[5];
 	void parseBureauFile(const std::string&);
-
+	void editBureauFile();
+	
 private:
 	bool loadDBF();
 	bool readDBF();
 	static void trimContent(std::string&);
+	bool pickSegToEdit();
+	void populateTempTxt();
 };
 
 
