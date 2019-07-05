@@ -136,7 +136,6 @@ void DBF::parseBureauFile(const std::string& burFilePath) {
 		
 	std::cout << "Parsing bureau file. Starting to open file..." << std::endl;
 
-	this->burData.reserve(512);
 
 	if (burIn.is_open()) {
 		std::cout << "Bureau file opened. Ready to parse." << std::endl;
@@ -153,100 +152,207 @@ void DBF::parseBureauFile(const std::string& burFilePath) {
 		size_t pos = 0;
 		std::cout << "Starting to loop through data now...\n" << std::endl;
 		for (int i = 0; i < segmentKeys.size(); ++i) {
+			// these need to be reset for every new segment name
 			int segLen = 0;
 			int segPos = 0;
 			int subSegPos = 0;
 			int subSegLen = 0;
 			int nextLen = -1;
 			int len = 0;//doesn't really need the default
+			int subSegIndx = -1;
+			std::string lastSubSeg = "";
 			
-			std:: cout << "Starting to loop through the sections in segment \"" << segmentKeys[i] << "\"..." << std::endl;
+			//std:: cout << "\nStarting to loop through the sections in segment \"" << segmentKeys[i] << "\"..." << std::endl;
 
 			for (int j = 0; j < segments[segmentKeys[i]].size(); ++j) {
 				if (nextLen != -1) {
 					len = nextLen;
+						if (subSegPos != 0 && subSegLen != 0 && subSegPos != subSegLen && len + subSegPos > subSegLen)
+							len = subSegLen - subSegPos;
 					nextLen = -1;
-					std::cout << "nextLen was not -1, so setting the len to " << len << "." << std::endl;
+					//std::cout << "\nnextLen was not -1, so setting the len to " << len << "." << std::endl;
 				}
 				else {
 					len = this->segments[segmentKeys[i]][j].len;
-					std::cout << "nextLen was -1, so setting the len to " << len << "." << std::endl;
+					if (subSegPos != 0 && subSegLen != 0 && subSegPos != subSegLen && len + subSegPos > subSegLen)
+						len = subSegLen - subSegPos;
+					//std::cout << "\nnextLen was -1, so setting the len to " << len << "." << std::endl;
 				}
 				
-				std::string varName = segments[segmentKeys[i]][j].varName;
+				if (segLen != 0 && len + segPos > segLen)
+					len = segLen - segPos;
+				
+				std::string varName = this->segments[segmentKeys[i]][j].varName;
 				std::string burReadLine = burFile.substr(pos, len);
-				std::cout << "The varName from the dbf is currently " << varName << ", and the data just read was:\n[" << burReadLine << "]" << std::endl;
+					
+				//std::cout << "The varName from the dbf is currently " << varName << ", and the data just read was:\n[" << burReadLine << "]" << std::endl;
+					
 				if (j == 0 && burReadLine != segmentKeys[i]) {
-					std::cout << "Segment \"" << segmentKeys[i] << "\" is not found in this bureau file. Skipping to next segment..." << std::endl;
+					//std::cout << "Segment \"" << segmentKeys[i] << "\" is not found in this bureau file. Skipping to next segment..." << std::endl;
 					break;
 				}
+				else if (j == 0 && burSegData.find(segmentKeys[i]) == burSegData.end()) {
+					this->burFileSegKeys.push_back(burReadLine);
+				}
 				
-				if (varName.substr(0, 2) == "%|" && varName.substr(2,7) == "Seg_Len") {
+				if (varName.substr(0, 2) == "%|" && j == 1) {//varName.substr(2,7) == "Seg_Len") {
 					segLen = atoi(burReadLine.c_str());
-					std::cout << "Found the current segment's length data. Setting that to " << segLen << std::endl;
+					//std::cout << "Found the current segment's length data. Setting that to " << segLen << std::endl;
 				}
 				else if (varName.substr(0, 2) == "%|") {
-					subSegLen = atoi(burReadLine.c_str()) - subSegPos;
+					subSegLen = atoi(burReadLine.c_str());
 				}
 				else if (varName[0] == '%') {
 					nextLen = atoi(burReadLine.c_str());
-					std::cout << "Found length data for variable length attribute, " << varName << ". Setting the next data fetch length to " << nextLen << std::endl;
+					//std::cout << "Found length data for variable length attribute, " << varName << ". Setting the next data fetch length to " << nextLen << std::endl;
 				}
 				else if (varName.find("@|") != std::string::npos) {
+					subSegPos = 0;
+					subSegLen = 0;
 					do {
-						std::cout << "Found a conditional subsegment, " << varName << "." << std::endl;
+						//std::cout << "Found a conditional subsegment in DBF, " << varName << "." << std::endl;
 						size_t condSubPos = varName.find("@|");
 						std::string subSegName = varName.substr(0, condSubPos);
+							
 						if (subSegName != burReadLine) {
-							std::cout << "The line read from bureau file does not have this subsegment. Finding the next one..." << std::endl;
+							//std::cout << "The line read from bureau file does not have this subsegment. Finding the next one..." << std::endl;
+
 							do {
 								varName = this->segments[segmentKeys[i]][++j].varName;
 							} while (j < segments[segmentKeys[i]].size() - 1 && varName.find("@|") == std::string::npos);
+								
 						}
 						else {
-							std::cout << "This bureau file contains the subsegment " << subSegName << "." << std::endl;
+							//std::cout << "This bureau file contains the subsegment " << subSegName << "." << std::endl;
 							subSegPos = subSegName.length();
+							lastSubSeg = subSegName;
+							subSegIndx = j;
 							break;
 						}
-					} while (varName != "&EOS");
-					if (varName == "&EOS")
-						std::cout << "Reached the end of the \"" << segmentKeys[i] << "\" segment. Continuing..." << std::endl;
+						
+					} while (j != segments[segmentKeys[i]].size() - 1);//varName != "&EOS");
+					
+					if (j == segments[segmentKeys[i]].size() - 1) {
+						//std::cout << "Reached the end of the \"" << segmentKeys[i] << "\" segment. Continuing..." << std::endl;
+						// this will extract the end of segments, like the '@' symbol for Experian bureau files
+						len = this->segments[segmentKeys[i]][j].len;
+						burReadLine = burFile.substr(pos, len);
+						subSegIndx = -1;
+					}
 				}
 				
-				// TODO: only push back the segments the user wants to edit
-				if (burReadLine != "")
-					this->burData.push_back(burReadLine);
+				// TODO: only push back the segments the user wants to edit. Maybe just allow editing of the segments they want to see
+				if (this->burSegData[segmentKeys[i]].capacity() < 512)
+					this->burSegData[segmentKeys[i]].reserve(512);
+						
+				this->burSegData[segmentKeys[i]].push_back(burReadLine);
+
 				segPos += len;
 				pos += len;
-				std::cout << "Saving the data read:[" << burReadLine << "]\n Incrementing the segPos and global \"pos\" by len = " << len << std::endl;
-				std::cout << "i = " << i << " | Seg Len = " << segLen << " | segPos = " << segPos << " | nextLen = " << nextLen << " | len = " << len << std::endl;
+				if (subSegLen != 0)
+					subSegPos += len;
+					
+				//std::cout << "Saving the data read:[" << burReadLine << "]\n Incrementing the segPos and global \"pos\" by len = " << len << std::endl;
+				//std::cout << "i = " << i << " | Seg Len = " << segLen << " | segPos = " << segPos << " | nextLen = " << nextLen << " | len = " << len << " | subSegLen: " << subSegLen << " | subSegPos: " << subSegPos << std::endl;
+				
+				if (subSegIndx != -1 && burFile.substr(pos, segments[segmentKeys[i]][subSegIndx].len) == lastSubSeg) {
+					//std::cout << "Found another subsegment \"" << lastSubSeg << "\" in bureau file. Parsing it again." << std::endl;
+					//std::cout << "Last subseg: " << lastSubSeg << " | burFileSub: " << burFile.substr(pos, segments[segmentKeys[i]][subSegIndx].len) << std::endl;
+					j = subSegIndx;
+				}
+				else if (j == segments[segmentKeys[i]].size() - 1 && burFile.substr(pos, segments[segmentKeys[i]][0].len) == segmentKeys[i]) {
+					//std::cout << "Found another segment \"" << segmentKeys[i] << "\" in bureau file. Parsing it again." << std::endl;
+					//std::cout << "Last seg: " << segmentKeys[i] << " | burFileSub: " << burFile.substr(pos, segments[segmentKeys[i]][0].len) << std::endl;
+					--i;
+				}
 			}// end of inner for-loop
-			std::cout << "End of segment \"" << segmentKeys[i] << "\". Moving to next one..." << std::endl;
+			//std::cout << "End of segment \"" << segmentKeys[i] << "\". Moving to next one..." << std::endl;
 		}//end of outer for-loop
-
-		// while (pos < burFile.length()) {
-		// 	std::string key = it->first;
-		// 	pos = burFile.find(this->endFiller + key);
-		// 	if (pos != std::string::npos) {
-		// 		for (int i = 0; i < it->second.size(); ++i) {
-		// 			// need to know the type of segment %, &, or #
-		// 			std::string curVarName = it->second[i].varName.substr(0, 8);
-		// 			if (curVarName[0] == '%') {
-		// 				if (curVarName[1] == '|') {
-
-		// 				}
-		// 				else {
-
-		// 				}
-		// 			}
-		// 			std::string data = burFile.substr(pos, it->second[i].len);
-
-		// 		}
-		// 	}
-		// }
 
 	}
 	else {
 		std::cout << "Could not open bureau file in current directory: " << burFilePath << std::endl;
 	}
+	
+	
+	//for (int i = 0; i < this->burSegData[burFileSegKeys[2]].size(); ++i) {
+		//std::cout << "[" << this->burSegData[burFileSegKeys[2]][i] << "]" << std::endl;
+	//}
+}
+
+bool DBF::pickSegToEdit() {
+	std::cout << "\nWhich of these segments in the bureau file do you want to edit?\n" << std::endl;
+	for (int i = 0; i < this->burFileSegKeys.size(); ++i) {
+		std::cout << i + 1 << ": [" << this->burFileSegKeys[i] << "]" << std::endl;
+	}
+	std::cout << i + 1 << ": Cancel and Exit" << std::endl;
+	
+	std::cout << "\n>> ";
+	int menuChoice = 0;
+	std::string consoleIn;
+	std::getline(std::cin, consoleIn);
+		
+	menuChoice = atoi(consoleIn.c_str());
+	
+	
+	while (menuChoice > this->burFileSegKeys.size() + 1 || menuChoice < 1) {
+		std::cout << "Enter a number that exists in the menu.\n>> ";
+		std::getline(std::cin, consoleIn);
+		menuChoice = atoi(consoleIn.c_str());
+	}
+	
+	if (menuChoice == this->burFileSegKeys.size() + 1) {
+		std::cout << "Quitting the program." << std::endl;
+		return true;
+	}
+	
+	std::cout << "\nEditing the \"" << this->burFileSegKeys[menuChoice - 1] << "\" segment." << std::endl;
+	this->editSeg = this->burFileSegKeys[menuChoice - 1];
+	
+	return false;
+}
+
+void DBF::populateTempTxt() {
+	std::ofstream editOut("tmpBur.txt");
+		
+	if (editOut.is_open()) {
+		for (int i = 0; i < this->burSegData[this->editSeg].size(); ++i) {
+			int j = i % this->segments[this->editSeg].size();
+			Segment curSeg = this->segments[this->editSeg][j];
+			
+			editOut << curSeg.varName << ":[" << this->burSegData[this->editSeg][i] << "]" << std::endl;
+		}
+		
+		editOut.close();
+	}
+	else {
+		std::cout << "Failed to open or create the editable text file, \"tmpBur.txt\"." << std::endl;
+	}
+}
+
+void DBF::editBureauFile() {
+	bool quit = false;
+	
+	do {
+		quit = this->pickSegToEdit();
+		bool done = false;
+		if (!quit) {
+			this->populateTempTxt();
+			while (!done) {
+				//system("vi tmpBur.txt");
+				//done = confirm changes (this will also check to see if the user accidentally deleted brackets [ or ]
+				//done = this->checkChanges();
+				//if (done) {
+					//overwrite?
+					//if (overwrite == 'n') {
+						//get new name
+					//}
+					//this->rewriteBureauFile();
+				//}
+
+				break;
+			}
+		}
+
+	} while (!quit);
 }
