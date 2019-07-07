@@ -128,6 +128,7 @@ void DBF::trimContent(std::string& content) {
 }
 
 void DBF::parseBureauFile(const std::string& burFilePath) {
+	this->burFilePath = burFilePath;
 	if (!this->didReadDBF) {
 		std::cout << "Not continuing with parsing since the DBF was not read successfully." << std::endl;
 		return;
@@ -140,7 +141,6 @@ void DBF::parseBureauFile(const std::string& burFilePath) {
 
 	if (burIn.is_open()) {
 		std::cout << "Bureau file opened. Ready to parse." << std::endl;
-		this->burFilePath = burFilePath;
 			
 		std::string burFile = "";
 		std::getline(burIn, burFile);
@@ -218,7 +218,6 @@ void DBF::parseBureauFile(const std::string& burFilePath) {
 							
 						if (subSegName != burReadLine) {
 							//std::cout << "The line read from bureau file does not have this subsegment. Finding the next one..." << std::endl;
-
 							do {
 								varName = this->segments[segmentKeys[i]][++j].varName;
 							} while (j < segments[segmentKeys[i]].size() - 1 && varName.find("@|") == std::string::npos);
@@ -248,6 +247,11 @@ void DBF::parseBureauFile(const std::string& burFilePath) {
 					this->burSegData[segmentKeys[i]].reserve(512);
 						
 				this->burSegData[segmentKeys[i]].push_back(burReadLine);
+				this->burSegVarNames[segmentKeys[i]].push_back(varName);
+				if (this->burSegLinesCount[segmentKeys[i]].find(varName) != this->burSegLinesCount[segmentKeys[i]].end())
+					this->burSegLinesCount[segmentKeys[i]][varName]++;
+				else
+					this->burSegLinesCount[segmentKeys[i]][varName] = 1;
 
 				segPos += len;
 				pos += len;
@@ -324,15 +328,19 @@ void DBF::populateTempTxt() {
 		this->preEditFile.push_back("Edit the segment data in between the brackets. It works best if you are in replace mode.\n\n");
 
 		for (int i = 0; i < this->burSegData[this->editSeg].size(); ++i) {
-			int j = i % this->segments[this->editSeg].size();
+			int j = i % this->burSegLinesCount[this->editSeg].size();
 			if (j == 0) {
-				editOut << "**************** NEW SEGMENT ******************" << std::endl;
-				this->preEditFile.push_back("**************** NEW SEGMENT ******************\n");
+				this->preEditFile.push_back("************ NEW SEGMENT ************\n");
+				editOut << "************ NEW SEGMENT ************" << std::endl;
 			}
-			Segment curSeg = this->segments[this->editSeg][j];
+			// burSegData and burSegVarNames should be the same size
+			std::string curName = "zzz";
+			if (i <= this->burSegVarNames[this->editSeg].size()) {
+				curName = this->burSegVarNames[this->editSeg][i];
+			}
 			
-			editOut << curSeg.varName << ": [" << this->burSegData[this->editSeg][i] << "]" << std::endl;
-			this->preEditFile.push_back(curSeg.varName + ": [" + this->burSegData[this->editSeg][i] + "]\n");
+			editOut << curName << ": [" << this->burSegData[this->editSeg][i] << "]" << std::endl;
+			this->preEditFile.push_back(curName + ": [" + this->burSegData[this->editSeg][i] + "]\n");
 		}
 		
 		editOut.close();
@@ -358,7 +366,7 @@ void DBF::editBureauFile() {
 				if (done) {
 					std::cout << "\nWould you like to overwrite the bureau file? (y/n)>> ";
 					std::string yn = "";
-					std::string newName = burFilePath;
+					std::string newName = this->burFilePath;
 
 					std::getline(std::cin, yn);
 
@@ -369,6 +377,7 @@ void DBF::editBureauFile() {
 
 					this->rewriteBureauFile(newName);
 					quit = true;
+					break;
 				}
 				else {
 					std::string any;
@@ -377,7 +386,6 @@ void DBF::editBureauFile() {
 				}
 			}
 		}
-
 	} while (!quit);
 }
 
@@ -440,7 +448,7 @@ void DBF::rewriteBureauFile(std::string& fileName) {
 	if (tmpIn.is_open() && rewriteOut.is_open()) {
 		// write to the bureau file all the segments before the one the user edited
 		int keyIndex;
-		std::cout << "burFileSegKeys.size() = " << this->burFileSegKeys.size() << std::endl;
+		//std::cout << "burFileSegKeys.size() = " << this->burFileSegKeys.size() << std::endl;
 		for (int i = 0; i < this->burFileSegKeys.size(); ++i) {
 			if (this->burFileSegKeys[i] != this->editSeg) {
 				for (int j = 0; j < this->burSegData[this->burFileSegKeys[i]].size(); ++j) {
