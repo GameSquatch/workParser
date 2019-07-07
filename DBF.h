@@ -18,8 +18,11 @@ private:
 	std::vector<std::string> segmentKeys;
 	std::vector<std::string> burFileSegKeys;
 	std::vector<std::string> burData;
+	std::vector<std::string> preEditFile;
+	std::vector<std::string> postEditFile;
 		
 	std::string bureau;//Equifax, Experian, maybe TU at some point
+	std::string burFilePath;
 	std::string OUTDBFPath;
 	std::string dbfFileStr;
 	std::string header;
@@ -43,6 +46,8 @@ private:
 	static void trimContent(std::string&);
 	bool pickSegToEdit();
 	void populateTempTxt();
+	bool checkChanges();
+	void rewriteBureauFile(std::string&);
 };
 
 

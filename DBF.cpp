@@ -4,6 +4,7 @@ unsigned short int DBF::OUTDBFSectionLens[5] = {7, 17, 4, 4, 20};
 
 DBF::DBF(const std::string& OUTDBFPath, const std::string& bur)
 	: OUTDBFPath(OUTDBFPath)
+	, burFilePath("")
 	, bureau(bur)
 {
 	if (this->bureau == "Equifax") {
@@ -139,6 +140,7 @@ void DBF::parseBureauFile(const std::string& burFilePath) {
 
 	if (burIn.is_open()) {
 		std::cout << "Bureau file opened. Ready to parse." << std::endl;
+		this->burFilePath = burFilePath;
 			
 		std::string burFile = "";
 		std::getline(burIn, burFile);
@@ -282,7 +284,8 @@ void DBF::parseBureauFile(const std::string& burFilePath) {
 
 bool DBF::pickSegToEdit() {
 	std::cout << "\nWhich of these segments in the bureau file do you want to edit?\n" << std::endl;
-	for (int i = 0; i < this->burFileSegKeys.size(); ++i) {
+	int i;
+	for (i = 0; i < this->burFileSegKeys.size(); ++i) {
 		std::cout << i + 1 << ": [" << this->burFileSegKeys[i] << "]" << std::endl;
 	}
 	std::cout << i + 1 << ": Cancel and Exit" << std::endl;
@@ -313,17 +316,27 @@ bool DBF::pickSegToEdit() {
 }
 
 void DBF::populateTempTxt() {
+	this->preEditFile.reserve(256);
 	std::ofstream editOut("tmpBur.txt");
 		
 	if (editOut.is_open()) {
+		editOut << "Edit the segment data in between the brackets. It works best if you are in replace mode.\n" << std::endl;
+		this->preEditFile.push_back("Edit the segment data in between the brackets. It works best if you are in replace mode.\n\n");
+
 		for (int i = 0; i < this->burSegData[this->editSeg].size(); ++i) {
 			int j = i % this->segments[this->editSeg].size();
+			if (j == 0) {
+				editOut << "**************** NEW SEGMENT ******************" << std::endl;
+				this->preEditFile.push_back("**************** NEW SEGMENT ******************\n");
+			}
 			Segment curSeg = this->segments[this->editSeg][j];
 			
-			editOut << curSeg.varName << ":[" << this->burSegData[this->editSeg][i] << "]" << std::endl;
+			editOut << curSeg.varName << ": [" << this->burSegData[this->editSeg][i] << "]" << std::endl;
+			this->preEditFile.push_back(curSeg.varName + ": [" + this->burSegData[this->editSeg][i] + "]\n");
 		}
 		
 		editOut.close();
+
 	}
 	else {
 		std::cout << "Failed to open or create the editable text file, \"tmpBur.txt\"." << std::endl;
@@ -339,20 +352,131 @@ void DBF::editBureauFile() {
 		if (!quit) {
 			this->populateTempTxt();
 			while (!done) {
-				//system("vi tmpBur.txt");
+				system("vi tmpBur.txt");
 				//done = confirm changes (this will also check to see if the user accidentally deleted brackets [ or ]
-				//done = this->checkChanges();
-				//if (done) {
-					//overwrite?
-					//if (overwrite == 'n') {
-						//get new name
-					//}
-					//this->rewriteBureauFile();
-				//}
+				done = this->checkChanges();
+				if (done) {
+					std::cout << "\nWould you like to overwrite the bureau file? (y/n)>> ";
+					std::string yn = "";
+					std::string newName = burFilePath;
 
-				break;
+					std::getline(std::cin, yn);
+
+					if (yn == "n") {
+						std::cout << "What name do want the new file to have?\n>> ";
+						std::getline(std::cin, newName);
+					}
+
+					this->rewriteBureauFile(newName);
+					quit = true;
+				}
+				else {
+					std::string any;
+					std::cout << "Press any key and hit ENTER to continue..." << std::endl;
+					std::getline(std::cin, any);
+				}
 			}
 		}
 
 	} while (!quit);
+}
+
+bool DBF::checkChanges() {
+	if (this->postEditFile.size() == 0)
+		this->postEditFile.reserve(256);
+	else
+		this->postEditFile.clear();
+	std::ifstream checkIn("tmpBur.txt");
+
+	if (checkIn.is_open()) {
+		std::string ln;
+		std::getline(checkIn, ln);
+		while (checkIn.good()) {
+			this->postEditFile.push_back(ln);
+			std::getline(checkIn, ln);
+		}
+		checkIn.close();
+
+		//unsigned int preSize = this->preEditFile.size();
+		unsigned int postSize = this->postEditFile.size();
+		//std::cout << "Hello there: " << this->postEditFile.size() << std::endl;
+
+		for (int i = 0; i <= postSize; ++i) {//std::string ln: this->postEditFile) {
+			if ((this->postEditFile[i].find("[") != std::string::npos && this->postEditFile[i].find("]") == std::string::npos)
+				|| (this->postEditFile[i].find("[") == std::string::npos && this->postEditFile[i].find("]") != std::string::npos)
+				|| (this->postEditFile[i].find(":") != std::string::npos && this->postEditFile[i].find("[") == std::string::npos && this->postEditFile[i].find("]") == std::string::npos))
+			{
+				std::cout << "It appears there are some brackets that have been deleted. Please fix line " << i + 1 << std::endl;
+				return false;
+			}
+		}
+
+		//int sizeDiff = postSize - preSize;
+		//unsigned int nSectionsInSeg = this->segments[this->editSeg].size();
+	}
+	else {
+		std::cout << "Could not open or create \"tmpBur.txt\" to check your changes." << std::endl;
+	}
+	return true;
+}
+
+void DBF::rewriteBureauFile(std::string& fileName) {
+	int pos = fileName.find_last_of('/');
+	if (pos != std::string::npos) {
+		fileName = fileName.substr(pos + 1);
+		std::cout << "Original file name: " << fileName << std::endl;
+	}
+
+	pos = fileName.find('.');
+	if (pos == std::string::npos) {
+		std::cout << "No file extension provided. Your new file will be of \".txt\"." << std::endl;
+		fileName += ".txt";
+	}
+
+	std::ifstream tmpIn("tmpBur.txt");
+	std::ofstream rewriteOut(fileName.c_str());
+
+
+	if (tmpIn.is_open() && rewriteOut.is_open()) {
+		// write to the bureau file all the segments before the one the user edited
+		int keyIndex;
+		std::cout << "burFileSegKeys.size() = " << this->burFileSegKeys.size() << std::endl;
+		for (int i = 0; i < this->burFileSegKeys.size(); ++i) {
+			if (this->burFileSegKeys[i] != this->editSeg) {
+				for (int j = 0; j < this->burSegData[this->burFileSegKeys[i]].size(); ++j) {
+					rewriteOut << this->burSegData[this->burFileSegKeys[i]][j];
+				}
+			}
+			else {
+				keyIndex = i;
+				break;
+			}
+		}
+
+		std::string tmpLine;
+		std::getline(tmpIn, tmpLine);
+		while (tmpIn.good()) {
+			int start = tmpLine.find("[");
+			int end = tmpLine.find("]");
+
+			if (start != std::string::npos && end != std::string::npos) {
+				tmpLine = tmpLine.substr(start + 1, end - start - 1);
+				rewriteOut << tmpLine;
+			}
+			std::getline(tmpIn, tmpLine);
+		}
+
+		// write to the bureau file all the segments after the one the user edited
+		for (int i = keyIndex + 1; i < this->burFileSegKeys.size(); ++i) {
+			for (int j = 0; j < this->burSegData[this->burFileSegKeys[i]].size(); ++j) {
+				rewriteOut << this->burSegData[this->burFileSegKeys[i]][j];
+			}
+		}
+
+		tmpIn.close();
+		rewriteOut.close();
+	}
+	else {
+		std::cout << "Could not open one of the two files: \"" << fileName << "\" or \"tmpBur.txt\"." << std::endl;
+	}
 }
