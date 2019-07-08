@@ -409,7 +409,7 @@ bool DBF::checkChanges() {
 		unsigned int postSize = this->postEditFile.size();
 		//std::cout << "Hello there: " << this->postEditFile.size() << std::endl;
 
-		for (int i = 0; i <= postSize; ++i) {//std::string ln: this->postEditFile) {
+		for (int i = 0; i < postSize; ++i) {//std::string ln: this->postEditFile) {
 			if ((this->postEditFile[i].find("[") != std::string::npos && this->postEditFile[i].find("]") == std::string::npos)
 				|| (this->postEditFile[i].find("[") == std::string::npos && this->postEditFile[i].find("]") != std::string::npos)
 				|| (this->postEditFile[i].find(":") != std::string::npos && this->postEditFile[i].find("[") == std::string::npos && this->postEditFile[i].find("]") == std::string::npos))
