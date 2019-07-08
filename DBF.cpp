@@ -248,10 +248,10 @@ void DBF::parseBureauFile(const std::string& burFilePath) {
 						
 				this->burSegData[segmentKeys[i]].push_back(burReadLine);
 				this->burSegVarNames[segmentKeys[i]].push_back(varName);
-				if (this->burSegLinesCount[segmentKeys[i]].find(varName) != this->burSegLinesCount[segmentKeys[i]].end())
-					this->burSegLinesCount[segmentKeys[i]][varName]++;
-				else
-					this->burSegLinesCount[segmentKeys[i]][varName] = 1;
+				
+				if (j == segments[segmentKeys[i]].size() - 1) {
+					this->burSegVarNameSizes[segmentKeys[i]].push_back(this->burSegVarNames[segmentKeys[i]].size());
+				}
 
 				segPos += len;
 				pos += len;
@@ -326,12 +326,14 @@ void DBF::populateTempTxt() {
 	if (editOut.is_open()) {
 		editOut << "Edit the segment data in between the brackets. It works best if you are in replace mode.\n" << std::endl;
 		this->preEditFile.push_back("Edit the segment data in between the brackets. It works best if you are in replace mode.\n\n");
-
+		int j = 0;
 		for (int i = 0; i < this->burSegData[this->editSeg].size(); ++i) {
-			int j = i % this->burSegLinesCount[this->editSeg].size();
-			if (j == 0) {
+			int sz = this->burSegVarNameSizes[this->editSeg][j];
+			if (i == sz || i == 0) {
 				this->preEditFile.push_back("************ NEW SEGMENT ************\n");
 				editOut << "************ NEW SEGMENT ************" << std::endl;
+				if (i != 0)
+					++j;
 			}
 			// burSegData and burSegVarNames should be the same size
 			std::string curName = "zzz";
