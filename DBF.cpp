@@ -163,6 +163,7 @@ void DBF::parseBureauFile(const std::string& burFilePath) {
 			int len = 0;//doesn't really need the default
 			int subSegIndx = -1;
 			std::string lastSubSeg = "";
+			bool repeat = false;
 			
 			//std:: cout << "\nStarting to loop through the sections in segment \"" << segmentKeys[i] << "\"..." << std::endl;
 
@@ -255,10 +256,11 @@ void DBF::parseBureauFile(const std::string& burFilePath) {
 
 				segPos += len;
 				pos += len;
-				if (subSegLen != 0)
+				if (subSegLen != 0 && subSegLen != subSegPos)
 					subSegPos += len;
 					
-				//std::cout << "Saving the data read:[" << burReadLine << "]\n Incrementing the segPos and global \"pos\" by len = " << len << std::endl;
+				//std::cout << "Saving the data read:[" << burReadLine << "]" << std::endl;
+				//std::cout << "Current segment: " << segmentKeys[i] << std::endl;
 				//std::cout << "i = " << i << " | Seg Len = " << segLen << " | segPos = " << segPos << " | nextLen = " << nextLen << " | len = " << len << " | subSegLen: " << subSegLen << " | subSegPos: " << subSegPos << std::endl;
 				
 				if (subSegIndx != -1 && burFile.substr(pos, segments[segmentKeys[i]][subSegIndx].len) == lastSubSeg) {
@@ -269,9 +271,10 @@ void DBF::parseBureauFile(const std::string& burFilePath) {
 				else if (j == segments[segmentKeys[i]].size() - 1 && burFile.substr(pos, segments[segmentKeys[i]][0].len) == segmentKeys[i]) {
 					//std::cout << "Found another segment \"" << segmentKeys[i] << "\" in bureau file. Parsing it again." << std::endl;
 					//std::cout << "Last seg: " << segmentKeys[i] << " | burFileSub: " << burFile.substr(pos, segments[segmentKeys[i]][0].len) << std::endl;
-					--i;
+					repeat = true;
 				}
 			}// end of inner for-loop
+			if (repeat) --i;
 			//std::cout << "End of segment \"" << segmentKeys[i] << "\". Moving to next one..." << std::endl;
 		}//end of outer for-loop
 
