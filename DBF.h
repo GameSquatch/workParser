@@ -16,7 +16,7 @@ private:
 	std::map<std::string, std::vector<Segment> > segments;
 	std::map<std::string, std::vector<std::string> > burSegData;
 	std::map<std::string, std::vector<std::string> > burSegVarNames;
-	std::map<std::string, std::map<std::string, int> > burSegLinesCount;
+	std::map<std::string, std::vector<int> > burSegVarNameSizes;
 		
 	std::vector<std::string> segmentKeys;
 	std::vector<std::string> burFileSegKeys;

@@ -175,6 +175,7 @@ void DBF::parseBureauFile(const std::string& burFilePath) {
 			int len = 0;//doesn't really need the default
 			int subSegIndx = -1;
 			std::string lastSubSeg = "";
+			bool repeat = false;
 			
 			//std:: cout << "\nStarting to loop through the sections in segment \"" << segmentKeys[i] << "\"..." << std::endl;
 
@@ -260,17 +261,18 @@ void DBF::parseBureauFile(const std::string& burFilePath) {
 						
 				this->burSegData[segmentKeys[i]].push_back(burReadLine);
 				this->burSegVarNames[segmentKeys[i]].push_back(varName);
-				if (this->burSegLinesCount[segmentKeys[i]].find(varName) != this->burSegLinesCount[segmentKeys[i]].end())
-					this->burSegLinesCount[segmentKeys[i]][varName]++;
-				else
-					this->burSegLinesCount[segmentKeys[i]][varName] = 1;
+				
+				if (j == segments[segmentKeys[i]].size() - 1) {
+					this->burSegVarNameSizes[segmentKeys[i]].push_back(this->burSegVarNames[segmentKeys[i]].size());
+				}
 
 				segPos += len;
 				pos += len;
-				if (subSegLen != 0)
+				if (subSegLen != 0 && subSegLen != subSegPos)
 					subSegPos += len;
 					
-				//std::cout << "Saving the data read:[" << burReadLine << "]\n Incrementing the segPos and global \"pos\" by len = " << len << std::endl;
+				//std::cout << "Saving the data read:[" << burReadLine << "]" << std::endl;
+				//std::cout << "Current segment: " << segmentKeys[i] << std::endl;
 				//std::cout << "i = " << i << " | Seg Len = " << segLen << " | segPos = " << segPos << " | nextLen = " << nextLen << " | len = " << len << " | subSegLen: " << subSegLen << " | subSegPos: " << subSegPos << std::endl;
 				
 				if (subSegIndx != -1 && burFile.substr(pos, segments[segmentKeys[i]][subSegIndx].len) == lastSubSeg) {
@@ -281,9 +283,10 @@ void DBF::parseBureauFile(const std::string& burFilePath) {
 				else if (j == segments[segmentKeys[i]].size() - 1 && burFile.substr(pos, segments[segmentKeys[i]][0].len) == segmentKeys[i]) {
 					//std::cout << "Found another segment \"" << segmentKeys[i] << "\" in bureau file. Parsing it again." << std::endl;
 					//std::cout << "Last seg: " << segmentKeys[i] << " | burFileSub: " << burFile.substr(pos, segments[segmentKeys[i]][0].len) << std::endl;
-					--i;
+					repeat = true;
 				}
 			}// end of inner for-loop
+			if (repeat) --i;
 			//std::cout << "End of segment \"" << segmentKeys[i] << "\". Moving to next one..." << std::endl;
 		}//end of outer for-loop
 
@@ -338,12 +341,14 @@ void DBF::populateTempTxt() {
 	if (editOut.is_open()) {
 		editOut << "Edit the segment data in between the brackets. It works best if you are in replace mode.\n" << std::endl;
 		this->preEditFile.push_back("Edit the segment data in between the brackets. It works best if you are in replace mode.\n\n");
-
+		int j = 0;
 		for (int i = 0; i < this->burSegData[this->editSeg].size(); ++i) {
-			int j = i % this->burSegLinesCount[this->editSeg].size();
-			if (j == 0) {
+			int sz = this->burSegVarNameSizes[this->editSeg][j];
+			if (i == sz || i == 0) {
 				this->preEditFile.push_back("************ NEW SEGMENT ************\n");
 				editOut << "************ NEW SEGMENT ************" << std::endl;
+				if (i != 0)
+					++j;
 			}
 			// burSegData and burSegVarNames should be the same size
 			std::string curName = "zzz";
@@ -423,7 +428,7 @@ bool DBF::checkChanges() {
 		unsigned int postSize = this->postEditFile.size();
 		//std::cout << "Hello there: " << this->postEditFile.size() << std::endl;
 
-		for (int i = 0; i <= postSize; ++i) {//std::string ln: this->postEditFile) {
+		for (int i = 0; i < postSize; ++i) {//std::string ln: this->postEditFile) {
 			if ((this->postEditFile[i].find("[") != std::string::npos && this->postEditFile[i].find("]") == std::string::npos)
 				|| (this->postEditFile[i].find("[") == std::string::npos && this->postEditFile[i].find("]") != std::string::npos)
 				|| (this->postEditFile[i].find(":") != std::string::npos && this->postEditFile[i].find("[") == std::string::npos && this->postEditFile[i].find("]") == std::string::npos))
