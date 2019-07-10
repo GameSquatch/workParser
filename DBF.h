@@ -42,6 +42,7 @@ public:
 	DBF(const std::string& OUTDBFPath, const std::string& bur);
 
 	static unsigned short int OUTDBFSectionLens[5];
+	
 	void parseBureauFile(const std::string&);
 	void editBureauFile();
 	
@@ -52,6 +53,8 @@ private:
 	bool pickSegToEdit();
 	void populateTempTxt();
 	bool checkChanges();
+	bool checkMissingBrackets();
+	bool checkSegmentLengths();
 	void rewriteBureauFile(const std::string&);
 };
 
