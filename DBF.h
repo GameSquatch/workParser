@@ -7,6 +7,8 @@
 #include <iostream>
 #include <cstdlib>
 #include <exception>
+#include <ctime>
+#include <sstream>
 #include "Segment.h"
 
 class DBF {
@@ -29,6 +31,8 @@ private:
 	std::string header;
 	std::string endFiller;
 	std::string editSeg;
+	std::string timeTag;
+	std::string tmpFileName;
 		
 	bool loadedDBF;
 	bool didReadDBF;
@@ -48,7 +52,7 @@ private:
 	bool pickSegToEdit();
 	void populateTempTxt();
 	bool checkChanges();
-	void rewriteBureauFile(std::string&);
+	void rewriteBureauFile(const std::string&);
 };
 
 

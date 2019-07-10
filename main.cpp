@@ -7,13 +7,14 @@ string whichBur(const string&);
 
 int main(int argc, char* argv[]) {
 
-	// if (argc != 2) {
-	// 	cout << "Enter the bureau file you want to edit as the argument!" << endl;
+	// if (argc < 2) {
+	//  	cout << "Enter the bureau file you want to edit as the argument!" << endl;
 	// 	return 1;
 	// }
 	
 	// pass the argument into a string (might want for later)
 	string burFile = "../B123MYRX.3JJ";//argv[1];
+	
 	string bureau = whichBur(burFile);
 	cout << "Bureau is " << bureau << endl;
 
@@ -21,6 +22,7 @@ int main(int argc, char* argv[]) {
 		return 2;
 
 	string dbfPath = "../";
+
 
 	DBF dbf(dbfPath, bureau);
 	

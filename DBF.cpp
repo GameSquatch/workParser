@@ -23,6 +23,18 @@ DBF::DBF(const std::string& OUTDBFPath, const std::string& bur)
 	else {
 		std::cout << "Failed loading the DBF." << std::endl;
 	}
+
+	time_t curTm;
+	time(&curTm);
+	struct tm* tmObj;
+
+	tmObj = localtime(&curTm);
+
+	std::stringstream ss;
+	ss << tmObj->tm_sec << tmObj->tm_min << tmObj->tm_hour << tmObj->tm_yday << tmObj->tm_year;
+
+	this->timeTag = ss.str();
+	this->tmpFileName = "tmp" + this->timeTag + "z.txt";
 	
 }
 
@@ -321,7 +333,7 @@ bool DBF::pickSegToEdit() {
 
 void DBF::populateTempTxt() {
 	this->preEditFile.reserve(256);
-	std::ofstream editOut("tmpBur.txt");
+	std::ofstream editOut(this->tmpFileName.c_str());
 		
 	if (editOut.is_open()) {
 		editOut << "Edit the segment data in between the brackets. It works best if you are in replace mode.\n" << std::endl;
@@ -347,7 +359,7 @@ void DBF::populateTempTxt() {
 
 	}
 	else {
-		std::cout << "Failed to open or create the editable text file, \"tmpBur.txt\"." << std::endl;
+		std::cout << "Failed to open or create the editable text file, \"" << this->tmpFileName << "\"." << std::endl;
 	}
 }
 
@@ -360,7 +372,8 @@ void DBF::editBureauFile() {
 		if (!quit) {
 			this->populateTempTxt();
 			while (!done) {
-				system("vi tmpBur.txt");
+				std::string cmd = "vi " + this->tmpFileName;
+				system(cmd.c_str());
 				//done = confirm changes (this will also check to see if the user accidentally deleted brackets [ or ]
 				done = this->checkChanges();
 				if (done) {
@@ -394,7 +407,8 @@ bool DBF::checkChanges() {
 		this->postEditFile.reserve(256);
 	else
 		this->postEditFile.clear();
-	std::ifstream checkIn("tmpBur.txt");
+
+	std::ifstream checkIn(this->tmpFileName.c_str());
 
 	if (checkIn.is_open()) {
 		std::string ln;
@@ -428,21 +442,29 @@ bool DBF::checkChanges() {
 	return true;
 }
 
-void DBF::rewriteBureauFile(std::string& fileName) {
+void DBF::rewriteBureauFile(const std::string& fileName) {
+	std::string filePrefix = "";
+	std::string fileNameUse = "";
 	int pos = fileName.find_last_of('/');
+
 	if (pos != std::string::npos) {
-		fileName = fileName.substr(pos + 1);
-		std::cout << "Original file name: " << fileName << std::endl;
+		filePrefix = fileName.substr(0, pos + 1);
+		fileNameUse = fileName.substr(pos + 1);
+		std::cout << "Original file name: " << fileNameUse << std::endl;
+		std::cout << "File prefix: " << filePrefix << std::endl;
 	}
 
-	pos = fileName.find('.');
+	pos = fileNameUse.find('.');
 	if (pos == std::string::npos) {
 		std::cout << "No file extension provided. Your new file will be of \".txt\"." << std::endl;
-		fileName += ".txt";
+		fileNameUse += ".txt";
 	}
 
-	std::ifstream tmpIn("tmpBur.txt");
-	std::ofstream rewriteOut(fileName.c_str());
+	// reattach prefix for writing to the file in the correct directory
+	fileNameUse = filePrefix + fileNameUse;
+
+	std::ifstream tmpIn(this->tmpFileName.c_str());
+	std::ofstream rewriteOut(fileNameUse.c_str());
 
 
 	if (tmpIn.is_open() && rewriteOut.is_open()) {
@@ -483,6 +505,10 @@ void DBF::rewriteBureauFile(std::string& fileName) {
 
 		tmpIn.close();
 		rewriteOut.close();
+
+		// remove the temp file that was created for editing
+		std::string rmCmd = "rm -f " + this->tmpFileName;
+		system(rmCmd.c_str());
 	}
 	else {
 		std::cout << "Could not open one of the two files: \"" << fileName << "\" or \"tmpBur.txt\"." << std::endl;
