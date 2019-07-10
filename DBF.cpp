@@ -34,6 +34,7 @@ DBF::DBF(const std::string& OUTDBFPath, const std::string& bur)
 	ss << tmObj->tm_sec << tmObj->tm_min << tmObj->tm_hour << tmObj->tm_yday << tmObj->tm_year;
 
 	this->timeTag = ss.str();
+	std::cout << this->timeTag << std::endl;
 	this->tmpFileName = "tmp" + this->timeTag + "z.txt";
 	
 }
@@ -408,11 +409,13 @@ void DBF::editBureauFile() {
 }
 
 bool DBF::checkChanges() {
+	// don't want to be appending the same vector each iteration in editBureauFile()
 	if (this->postEditFile.size() == 0)
 		this->postEditFile.reserve(256);
 	else
 		this->postEditFile.clear();
 
+	// need to read the file each time after an edit
 	std::ifstream checkIn(this->tmpFileName.c_str());
 
 	if (checkIn.is_open()) {
@@ -426,30 +429,65 @@ bool DBF::checkChanges() {
 
 		//unsigned int preSize = this->preEditFile.size();
 		unsigned int postSize = this->postEditFile.size();
-		//std::cout << "Hello there: " << this->postEditFile.size() << std::endl;
-
-		for (int i = 0; i < postSize; ++i) {//std::string ln: this->postEditFile) {
-			if ((this->postEditFile[i].find("[") != std::string::npos && this->postEditFile[i].find("]") == std::string::npos)
-				|| (this->postEditFile[i].find("[") == std::string::npos && this->postEditFile[i].find("]") != std::string::npos)
-				|| (this->postEditFile[i].find(":") != std::string::npos && this->postEditFile[i].find("[") == std::string::npos && this->postEditFile[i].find("]") == std::string::npos))
-			{
-				std::cout << "It appears there are some brackets that have been deleted. Please fix line " << i + 1 << std::endl;
-				return false;
-			}
+		
+		// segment length check won't work if there are missing brackets, so they need to be divided this way
+		// it will be annoying for the user to have to fix one thing only to find another error, but such is life
+		if (this->checkMissingBrackets()) {
+			return false;
 		}
-
-		//int sizeDiff = postSize - preSize;
-		//unsigned int nSectionsInSeg = this->segments[this->editSeg].size();
+		else if (this->checkSegmentLengths()) {
+			return false;
+		}
+		
 	}
 	else {
 		std::cout << "Could not open or create \"tmpBur.txt\" to check your changes." << std::endl;
 	}
+	
 	return true;
+}
+
+bool DBF::checkMissingBrackets() {
+	//std::cout << "Hello there: " << this->postEditFile.size() << std::endl;
+	bool hasMissingBracks = false;
+	unsigned int postSize = this->postEditFile.size();
+
+	for (int i = 0; i < postSize; ++i) {//std::string ln: this->postEditFile) {
+		size_t start = this->postEditFile[i].find("[");
+		size_t end = this->postEditFile[i].find("]");
+		size_t colon = this->postEditFile[i].find(":");
+			
+		// Detect missing brackets. Every line with a colon will have data, and the same with one or two brackets
+		if ((start != std::string::npos && end == std::string::npos)
+			|| (start == std::string::npos && end != std::string::npos)
+			|| (colon != std::string::npos && start == std::string::npos && end == std::string::npos))
+		{
+			std::cout << "!! It appears there are some brackets that have been deleted. Please fix line " << i + 1 << std::endl;
+			hasMissingBracks = true;
+		}
+	}
+	
+	return hasMissingBracks;
+}
+
+bool DBF::checkSegmentLengths() {
+	bool segLenMisMatch = false;
+	int totalSegLen = 0;
+	int statedSegLen = 0;
+	int subSegLen = 0;
+	int idIndex = 0;
+	unsigned int postSize = this->postEditFile.size();
+	
+	for (int i = 0; i < postSize; ++i) {//std::string ln: this->postEditFile) {
+		// TODO
+	}
+	
+	return segLenMisMatch;
 }
 
 void DBF::rewriteBureauFile(const std::string& fileName) {
 	std::string filePrefix = "";
-	std::string fileNameUse = "";
+	std::string fileNameUse = fileName;
 	int pos = fileName.find_last_of('/');
 
 	if (pos != std::string::npos) {
