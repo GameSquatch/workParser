@@ -21,7 +21,7 @@ DBF::DBF(const std::string& OUTDBFPath, const std::string& bur)
 		this->didReadDBF = readDBF();
 	}
 	else {
-		std::cout << "Failed loading the DBF." << std::endl;
+		std::cout << "Failed loading the DBF. Not proceeding. Check your config file first." << std::endl;
 	}
 
 	time_t curTm;
@@ -46,10 +46,10 @@ bool DBF::loadDBF() {
 	std::cout << "Loading DBF..." << std::endl;
 
 	if (dbfIn.is_open()) {
-		std::cout << "Successfully opened the dbf. Ready to read entire file." << std::endl;
+		std::cout << "Successfully opened the dbf. Reading file..." << std::endl;
 
-			std::getline(dbfIn, this->dbfFileStr);
-			dbfIn.close();
+		std::getline(dbfIn, this->dbfFileStr);
+		dbfIn.close();
 	}
 	else {
 		std::cout << "Could not open the output DBF. Check the path for errors:\n";
@@ -60,6 +60,8 @@ bool DBF::loadDBF() {
 }// end loadDBF func
 
 bool DBF::readDBF() {
+	//if (!this->loadedDBF) return false;
+
 	size_t pos = this->dbfFileStr.find_first_of(' ');
 	if (pos != std::string::npos) {
 		++pos;// Include the space
@@ -142,8 +144,9 @@ void DBF::trimContent(std::string& content) {
 
 void DBF::parseBureauFile(const std::string& burFilePath) {
 	this->burFilePath = burFilePath;
-	if (!this->didReadDBF) {
-		std::cout << "Not continuing with parsing since the DBF was not read successfully." << std::endl;
+
+	if (!this->loadedDBF) {
+		std::cout << "Not continuing with parsing since the DBF did not load." << std::endl;
 		return;
 	}
 	// open bureauFile
@@ -303,7 +306,9 @@ void DBF::parseBureauFile(const std::string& burFilePath) {
 }
 
 bool DBF::pickSegToEdit() {
+	
 	std::cout << "\nWhich of these segments in the bureau file do you want to edit?\n" << std::endl;
+	
 	int i;
 	for (i = 0; i < this->burFileSegKeys.size(); ++i) {
 		std::cout << i + 1 << ": [" << this->burFileSegKeys[i] << "]" << std::endl;
@@ -370,6 +375,11 @@ void DBF::populateTempTxt() {
 }
 
 void DBF::editBureauFile() {
+	if (!this->loadedDBF) {
+		std::cout << "Not going to edit file since the DBF did not load." << std::endl;
+		return;
+	}
+
 	bool quit = false;
 	
 	do {
