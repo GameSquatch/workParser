@@ -25,9 +25,23 @@ int main(int argc, char* argv[]) {
 	string dbfPath = readConfigFile();
 
 	DBF dbf(dbfPath, bureau);
-	
-	dbf.parseBureauFile(burFile);
-	dbf.editBureauFile();
+
+	bool loadedDBF = dbf.loadDBF();
+	if (loadedDBF) {
+		bool didReadDBF = dbf.readDBF();
+		if (didReadDBF) {
+			dbf.parseBureauFile(burFile);
+			dbf.editBureauFile();
+		}
+		else {
+			std::cout << "Failed reading the DBF. Report as potential bug." << std::endl;
+			return 4;
+		}
+	}
+	else {
+		std::cout << "Failed loading the DBF. Not proceeding. Check your config file first." << std::endl;
+		return 3;
+	}
 
 	return 0;
 }

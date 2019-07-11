@@ -33,9 +33,6 @@ private:
 	std::string editSeg;
 	std::string timeTag;
 	std::string tmpFileName;
-		
-	bool loadedDBF;
-	bool didReadDBF;
 
 public:
 	DBF() {};
@@ -43,12 +40,12 @@ public:
 
 	static unsigned short int OUTDBFSectionLens[5];
 	
+	bool loadDBF();
+	bool readDBF();
 	void parseBureauFile(const std::string&);
 	void editBureauFile();
 	
 private:
-	bool loadDBF();
-	bool readDBF();
 	static void trimContent(std::string&);
 	bool pickSegToEdit();
 	void populateTempTxt();

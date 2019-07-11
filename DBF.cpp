@@ -16,14 +16,6 @@ DBF::DBF(const std::string& OUTDBFPath, const std::string& bur)
 		this->endFiller = "@";
 	}
 
-	this->loadedDBF = loadDBF();
-	if (this-loadedDBF) {
-		this->didReadDBF = readDBF();
-	}
-	else {
-		std::cout << "Failed loading the DBF. Not proceeding. Check your config file first." << std::endl;
-	}
-
 	time_t curTm;
 	time(&curTm);
 	struct tm* tmObj;
@@ -60,7 +52,6 @@ bool DBF::loadDBF() {
 }// end loadDBF func
 
 bool DBF::readDBF() {
-	//if (!this->loadedDBF) return false;
 
 	size_t pos = this->dbfFileStr.find_first_of(' ');
 	if (pos != std::string::npos) {
@@ -145,10 +136,6 @@ void DBF::trimContent(std::string& content) {
 void DBF::parseBureauFile(const std::string& burFilePath) {
 	this->burFilePath = burFilePath;
 
-	if (!this->loadedDBF) {
-		std::cout << "Not continuing with parsing since the DBF did not load." << std::endl;
-		return;
-	}
 	// open bureauFile
 	std::ifstream burIn(burFilePath.c_str());
 		
@@ -375,11 +362,6 @@ void DBF::populateTempTxt() {
 }
 
 void DBF::editBureauFile() {
-	if (!this->loadedDBF) {
-		std::cout << "Not going to edit file since the DBF did not load." << std::endl;
-		return;
-	}
-
 	bool quit = false;
 	
 	do {
