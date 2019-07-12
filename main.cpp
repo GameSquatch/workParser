@@ -56,10 +56,10 @@ string whichBur(const string& burFilePath) {
 		burIn.close();
 		
 		if (line.find("FULL") == 0) {
-			return "Equifax";
+			return "E1";
 		}
 		else if (line.find("110") == 0) {
-			return "Experian";
+			return "E2";
 		}
 		else {
 			return "Error";
