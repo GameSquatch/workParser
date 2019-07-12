@@ -7,11 +7,11 @@ DBF::DBF(const std::string& OUTDBFPath, const std::string& bur)
 	, burFilePath("")
 	, bureau(bur)
 {
-	if (this->bureau == "Equifax") {
+	if (this->bureau == "E1") {
 		this->OUTDBFPath += "CBIOUT.DBF";
 		this->endFiller = "  ";
 	}
-	else if (this->bureau == "Experian") {
+	else if (this->bureau == "E2") {
 		this->OUTDBFPath += "TRWOUT.DBF";
 		this->endFiller = "@";
 	}
