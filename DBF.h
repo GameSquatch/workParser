@@ -33,6 +33,8 @@ private:
 	std::string editSeg;
 	std::string timeTag;
 	std::string tmpFileName;
+	
+	std::ofstream errLog;
 
 public:
 	DBF() {};
