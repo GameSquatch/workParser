@@ -7,11 +7,11 @@ DBF::DBF(const std::string& OUTDBFPath, const std::string& bur)
 	, burFilePath("")
 	, bureau(bur)
 {
-	if (this->bureau == "E1") {
+	if (this->bureau == "Equifax") {
 		this->OUTDBFPath += "CBIOUT.DBF";
 		this->endFiller = "  ";
 	}
-	else if (this->bureau == "E2") {
+	else if (this->bureau == "Experian") {
 		this->OUTDBFPath += "TRWOUT.DBF";
 		this->endFiller = "@";
 	}
@@ -26,19 +26,41 @@ DBF::DBF(const std::string& OUTDBFPath, const std::string& bur)
 	ss << tmObj->tm_sec << tmObj->tm_min << tmObj->tm_hour << tmObj->tm_yday << tmObj->tm_year;
 
 	this->timeTag = ss.str();
-	std::cout << this->timeTag << std::endl;
+	//std::cout << this->timeTag << std::endl;
 	this->tmpFileName = "tmp" + this->timeTag + "z.txt";
+	
+	system("echo $USERNAME > usertmp");
+	std::ifstream userIn("usertmp");
+	std::string user = "UNKNOWN";
+	if (userIn.is_open()) {
+		std::getline(userIn, user);
+		userIn.close();
+		system("rm -f usertmp");
+	}
+	
+	std::stringstream s2;
+	if (tmObj->tm_min < 10) { s2 << 0 << tmObj->tm_min; }
+	else { s2 << tmObj->tm_min; }
+	int monAdj = tmObj->tm_mon + 1;
+	
+	this->errLog.open("/home/ewilliams/burEdErrLog.txt", std::ofstream::out | std::ofstream::app);
+	if (this->errLog.is_open()) {
+		this->errLog << "Time the program was ran: " << tmObj->tm_hour << ":" << s2.str() << " on " << monAdj << "/" << tmObj->tm_mday << " by user: " << user << std::endl;
+	}
+	else {
+		std::cout << "stream not open" << std::endl;
+	}
 	
 }
 
 bool DBF::loadDBF() {
-	std::cout << "DBF Path is: " << this->OUTDBFPath << std::endl;
+	//std::cout << "DBF Path is: " << this->OUTDBFPath << std::endl;
 	std::ifstream dbfIn(this->OUTDBFPath.c_str());
 
-	std::cout << "Loading DBF..." << std::endl;
+	//std::cout << "Loading DBF..." << std::endl;
 
 	if (dbfIn.is_open()) {
-		std::cout << "Successfully opened the dbf. Reading file..." << std::endl;
+		//std::cout << "Successfully opened the dbf. Reading file..." << std::endl;
 
 		std::getline(dbfIn, this->dbfFileStr);
 		dbfIn.close();
@@ -139,11 +161,11 @@ void DBF::parseBureauFile(const std::string& burFilePath) {
 	// open bureauFile
 	std::ifstream burIn(burFilePath.c_str());
 		
-	std::cout << "Parsing bureau file. Starting to open file..." << std::endl;
+	//std::cout << "Parsing bureau file. Starting to open file..." << std::endl;
 
 
 	if (burIn.is_open()) {
-		std::cout << "Bureau file opened. Ready to parse." << std::endl;
+		//std::cout << "Bureau file opened. Ready to parse." << std::endl;
 			
 		std::string burFile = "";
 		std::getline(burIn, burFile);
@@ -155,7 +177,7 @@ void DBF::parseBureauFile(const std::string& burFilePath) {
 		}
 
 		size_t pos = 0;
-		std::cout << "Starting to loop through data now...\n" << std::endl;
+		//std::cout << "Starting to loop through data now...\n" << std::endl;
 		for (int i = 0; i < segmentKeys.size(); ++i) {
 			// these need to be reset for every new segment name
 			int segLen = 0;
