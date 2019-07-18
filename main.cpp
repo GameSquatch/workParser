@@ -9,7 +9,7 @@ string readConfigFile();
 int main(int argc, char* argv[]) {
 
 	if (argc < 2) {
-	 	cout << "Enter the bureau file you want to edit as the argument!" << endl;
+	 	cout << "Enter the bureau file you want to edit as the argument." << endl;
 	 	return 1;
 	}
 	
@@ -17,7 +17,7 @@ int main(int argc, char* argv[]) {
 	string burFile = argv[1];//"./B123MYRX.3Lo";//argv[1]
 	
 	string bureau = whichBur(burFile);
-	cout << "Bureau is " << bureau << endl;
+	//cout << "Bureau is " << bureau << endl;
 
 	if (bureau == "Error")
 		return 2;
@@ -56,10 +56,10 @@ string whichBur(const string& burFilePath) {
 		burIn.close();
 		
 		if (line.find("FULL") == 0) {
-			return "E1";
+			return "Equifax";
 		}
 		else if (line.find("110") == 0) {
-			return "E2";
+			return "Experian";
 		}
 		else {
 			return "Error";
@@ -84,7 +84,7 @@ string readConfigFile() {
 		string ln;
 		std::getline(userIn, ln);
 		userIn.close();
-		cout << "Home directory obtained is: " << ln << endl;
+		//cout << "Home directory obtained is: " << ln << endl;
 		// create a path string to the user's home directory
 		string configFile = ln + "/.burEdCfg";
 	
