@@ -1,11 +1,13 @@
 #include "DBF.h"
 
 unsigned short int DBF::OUTDBFSectionLens[5] = {7, 17, 4, 4, 20};
+bool DBF::isView() { return this->optionView; }
 
-DBF::DBF(const std::string& OUTDBFPath, const std::string& bur)
+DBF::DBF(const std::string& OUTDBFPath, const std::string& bur, const std::string& optArg)
 	: OUTDBFPath(OUTDBFPath)
 	, burFilePath("")
 	, bureau(bur)
+	, optArg(optArg)
 {
 	if (this->bureau == "Equifax") {
 		this->OUTDBFPath += "CBIOUT.DBF";
@@ -50,6 +52,10 @@ DBF::DBF(const std::string& OUTDBFPath, const std::string& bur)
 	else {
 		std::cout << "stream not open" << std::endl;
 	}
+	
+	this->initOptions();
+	if (this->optArg != "")
+		this->handleOption();
 	
 }
 
@@ -354,8 +360,8 @@ void DBF::populateTempTxt() {
 	std::ofstream editOut(this->tmpFileName.c_str());
 		
 	if (editOut.is_open()) {
-		editOut << "Edit the segment data in between the brackets. It works best if you are in replace mode.\n" << std::endl;
-		this->preEditFile.push_back("Edit the segment data in between the brackets. It works best if you are in replace mode.\n\n");
+		editOut << "Edit the segment data in between the brackets. It works best if you are in replace mode.\nSave and quit to continue.\n" << std::endl;
+		this->preEditFile.push_back("Edit the segment data in between the brackets. It works best if you are in replace mode.\nSave and quit to continue\n\n");
 		int j = 0;
 		for (int i = 0; i < this->burSegData[this->editSeg].size(); ++i) {
 			int sz = this->burSegVarNameSizes[this->editSeg][j];
@@ -570,4 +576,25 @@ void DBF::rewriteBureauFile(const std::string& fileName) {
 	else {
 		std::cout << "Could not open one of the two files: \"" << fileName << "\" or \"tmpBur.txt\"." << std::endl;
 	}
+}
+
+void DBF::viewBureauFile() {
+	this->pickSegToEdit();
+	this->populateTempTxt();
+	std::string cmd = "less " + this->tmpFileName;
+	
+	system(cmd.c_str());
+	
+	cmd = "rm -f " + this->tmpFileName;
+	
+	system(cmd.c_str());
+}
+
+void DBF::handleOption() {
+	if (this->optArg == "--view")
+		this->optionView = true;
+}
+
+void DBF::initOptions() {
+	this->optionView = false;
 }
