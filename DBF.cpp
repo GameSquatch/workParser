@@ -1,11 +1,13 @@
 #include "DBF.h"
 
 unsigned short int DBF::OUTDBFSectionLens[5] = {7, 17, 4, 4, 20};
+bool DBF::isView() { return this->optionView; }
 
-DBF::DBF(const std::string& OUTDBFPath, const std::string& bur)
+DBF::DBF(const std::string& OUTDBFPath, const std::string& bur, const std::string& optArg)
 	: OUTDBFPath(OUTDBFPath)
 	, burFilePath("")
 	, bureau(bur)
+	, optArg(optArg)
 {
 	if (this->bureau == "E1") {
 		this->OUTDBFPath += "CBIOUT.DBF";
@@ -26,19 +28,18 @@ DBF::DBF(const std::string& OUTDBFPath, const std::string& bur)
 	ss << tmObj->tm_sec << tmObj->tm_min << tmObj->tm_hour << tmObj->tm_yday << tmObj->tm_year;
 
 	this->timeTag = ss.str();
-	std::cout << this->timeTag << std::endl;
+	//std::cout << this->timeTag << std::endl;
 	this->tmpFileName = "tmp" + this->timeTag + "z.txt";
-	
 }
 
 bool DBF::loadDBF() {
-	std::cout << "DBF Path is: " << this->OUTDBFPath << std::endl;
+	//std::cout << "DBF Path is: " << this->OUTDBFPath << std::endl;
 	std::ifstream dbfIn(this->OUTDBFPath.c_str());
 
-	std::cout << "Loading DBF..." << std::endl;
+	//std::cout << "Loading DBF..." << std::endl;
 
 	if (dbfIn.is_open()) {
-		std::cout << "Successfully opened the dbf. Reading file..." << std::endl;
+		//std::cout << "Successfully opened the dbf. Reading file..." << std::endl;
 
 		std::getline(dbfIn, this->dbfFileStr);
 		dbfIn.close();
@@ -139,11 +140,11 @@ void DBF::parseBureauFile(const std::string& burFilePath) {
 	// open bureauFile
 	std::ifstream burIn(burFilePath.c_str());
 		
-	std::cout << "Parsing bureau file. Starting to open file..." << std::endl;
+	//std::cout << "Parsing bureau file. Starting to open file..." << std::endl;
 
 
 	if (burIn.is_open()) {
-		std::cout << "Bureau file opened. Ready to parse." << std::endl;
+		//std::cout << "Bureau file opened. Ready to parse." << std::endl;
 			
 		std::string burFile = "";
 		std::getline(burIn, burFile);
@@ -155,7 +156,7 @@ void DBF::parseBureauFile(const std::string& burFilePath) {
 		}
 
 		size_t pos = 0;
-		std::cout << "Starting to loop through data now...\n" << std::endl;
+		//std::cout << "Starting to loop through data now...\n" << std::endl;
 		for (int i = 0; i < segmentKeys.size(); ++i) {
 			// these need to be reset for every new segment name
 			int segLen = 0;
@@ -332,8 +333,8 @@ void DBF::populateTempTxt() {
 	std::ofstream editOut(this->tmpFileName.c_str());
 		
 	if (editOut.is_open()) {
-		editOut << "Edit the segment data in between the brackets. It works best if you are in replace mode.\n" << std::endl;
-		this->preEditFile.push_back("Edit the segment data in between the brackets. It works best if you are in replace mode.\n\n");
+		editOut << "Edit the segment data in between the brackets. It works best if you are in replace mode.\nSave and quit to continue.\n" << std::endl;
+		this->preEditFile.push_back("Edit the segment data in between the brackets. It works best if you are in replace mode.\nSave and quit to continue\n\n");
 		int j = 0;
 		for (int i = 0; i < this->burSegData[this->editSeg].size(); ++i) {
 			int sz = this->burSegVarNameSizes[this->editSeg][j];
@@ -548,4 +549,25 @@ void DBF::rewriteBureauFile(const std::string& fileName) {
 	else {
 		std::cout << "Could not open one of the two files: \"" << fileName << "\" or \"tmpBur.txt\"." << std::endl;
 	}
+}
+
+void DBF::viewBureauFile() {
+	this->pickSegToEdit();
+	this->populateTempTxt();
+	std::string cmd = "less " + this->tmpFileName;
+
+	system(cmd.c_str());
+
+	cmd = "rm -f " + this->tmpFileName;
+
+	system(cmd.c_str());
+}
+
+void DBF::handleOption() {
+	if (this->optArg == "--view")
+		this->optionView = true;
+}
+
+void DBF::initOptions() {
+	this->optionView = false;
 }

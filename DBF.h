@@ -33,16 +33,21 @@ private:
 	std::string editSeg;
 	std::string timeTag;
 	std::string tmpFileName;
+	std::string optArg;
+
+	bool optionView;
 
 public:
 	DBF() {};
-	DBF(const std::string& OUTDBFPath, const std::string& bur);
+	DBF(const std::string& OUTDBFPath, const std::string& bur, const std::string& optArg);
 
 	static unsigned short int OUTDBFSectionLens[5];
 	
 	bool loadDBF();
 	bool readDBF();
+	bool isView();
 	void parseBureauFile(const std::string&);
+	void viewBureauFile();
 	void editBureauFile();
 	
 private:
@@ -53,6 +58,8 @@ private:
 	bool checkMissingBrackets();
 	bool checkSegmentLengths();
 	void rewriteBureauFile(const std::string&);
+	void initOptions();
+	void handleOption();
 };
 
 

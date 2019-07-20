@@ -9,29 +9,40 @@ string readConfigFile();
 int main(int argc, char* argv[]) {
 
 	if (argc < 2) {
-	 	cout << "Enter the bureau file you want to edit as the argument!" << endl;
+	 	cout << "Enter the bureau file you want to edit as the argument." << endl;
 	 	return 1;
+	}
+	else if (argc == 3) {
+		optArg = argv[2];
 	}
 	
 	// pass the argument into a string (might want for later)
 	string burFile = argv[1];//"./B123MYRX.3Lo";//argv[1]
 	
 	string bureau = whichBur(burFile);
-	cout << "Bureau is " << bureau << endl;
+	//cout << "Bureau is " << bureau << endl;
 
 	if (bureau == "Error")
 		return 2;
 
 	string dbfPath = readConfigFile();
 
-	DBF dbf(dbfPath, bureau);
+	DBF dbf(dbfPath, bureau, optArg);
 
 	bool loadedDBF = dbf.loadDBF();
 	if (loadedDBF) {
 		bool didReadDBF = dbf.readDBF();
 		if (didReadDBF) {
-			dbf.parseBureauFile(burFile);
-			dbf.editBureauFile();
+			if (dbf.isView()) {
+				// TODO maybe separate parsing, viewing, and editing the bureau file into distinct methods.
+				dbf.parseBureauFile(burFile);
+				dbf.viewBureauFile();
+				cout << "viewing mode" << endl;
+			}
+			else {
+				dbf.parseBureauFile(burFile);
+				dbf.editBureauFile();
+			}
 		}
 		else {
 			std::cout << "Failed reading the DBF. Report as potential bug." << std::endl;
@@ -84,7 +95,7 @@ string readConfigFile() {
 		string ln;
 		std::getline(userIn, ln);
 		userIn.close();
-		cout << "Home directory obtained is: " << ln << endl;
+		//cout << "Home directory obtained is: " << ln << endl;
 		// create a path string to the user's home directory
 		string configFile = ln + "/.burEdCfg";
 	
@@ -101,7 +112,7 @@ string readConfigFile() {
 		}
 		else {
 			// if user had a config file, read the path they want for their parse-map files and return it
-			cout << "A config file exists. Reading preferred path to parse-map file...";
+			cout << "A config file exists in your home directory \".burEdCfg\". Reading preferred path to parse-map file...";
 			string path = "";
 			std::getline(cfgIn, path);
 			cfgIn.close();
