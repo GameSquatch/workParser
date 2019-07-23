@@ -8,6 +8,7 @@ string readConfigFile();
 
 int main(int argc, char* argv[]) {
 
+	string optArg = "";
 	if (argc < 2) {
 	 	cout << "Enter the bureau file you want to edit as the argument." << endl;
 	 	return 1;
