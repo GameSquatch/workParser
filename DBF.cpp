@@ -240,6 +240,14 @@ void DBF::parseBureauFile(const std::string& burFilePath) {
 					nextLen = atoi(burReadLine.c_str());
 					//std::cout << "Found length data for variable length attribute, " << varName << ". Setting the next data fetch length to " << nextLen << std::endl;
 				}
+				else if (varName.substr(0, 2) == "#*") {
+					size_t end = burReadLine.find("*");
+					std::cout << burReadLine << std::endl;
+					if (end != std::string::npos) {
+						len = end + 1;
+						burReadLine = burReadLine.substr(0, len);
+					}
+				}
 				else if (varName.find("@|") != std::string::npos) {
 					subSegPos = 0;
 					subSegLen = 0;
