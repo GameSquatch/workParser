@@ -33,18 +33,11 @@ private:
 	std::string editSeg;
 	std::string timeTag;
 	std::string tmpFileName;
-<<<<<<< HEAD
 	std::string optArg;
 		
 	bool optionView;
 		
 	std::ofstream errLog;
-||||||| merged common ancestors
-=======
-	std::string optArg;
-
-	bool optionView;
->>>>>>> feat
 
 public:
 	DBF() {};
